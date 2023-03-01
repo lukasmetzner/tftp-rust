@@ -22,7 +22,7 @@ fn send_ack(socket: &UdpSocket, block: u16) -> std::io::Result<()> {
     Ok(())
 }
 
-fn tftp_recv(socket: &UdpSocket) -> Vec<DATA> {
+fn tftp_recv_data(socket: &UdpSocket) -> Vec<DATA> {
     let mut block: u16 = 1;
     let mut last_length: usize = 512;
     let mut fullbuffer: Vec<DATA> = Vec::new();
@@ -88,7 +88,7 @@ fn recv_file(socket: &UdpSocket, filename: &str) -> Vec<DATA> {
         mode: "octet".to_string(),
     };
     socket.send_to(&rrq.to_bytes(), "127.0.0.1:6969").unwrap();
-    tftp_recv(&socket)
+    tftp_recv_data(&socket)
 }
 
 fn main() {
