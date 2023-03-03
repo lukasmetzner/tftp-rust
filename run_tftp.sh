@@ -1,1 +1,1 @@
-~/.local/bin/ptftpd -p 6969 lo tftp-server/ -D 
+ptftpd -p 6969 lo0 tftp-data/ -D 

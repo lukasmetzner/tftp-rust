@@ -1,5 +1,4 @@
 use std::net::UdpSocket;
-use std::io::{self, BufRead};
 
 enum OPCODE {
     RRW = 1,
@@ -22,17 +21,17 @@ fn send_ack(socket: &UdpSocket, block: u16) -> std::io::Result<()> {
     Ok(())
 }
 
-fn tftp_recv_data(socket: &UdpSocket) -> Vec<DATA> {
+fn tftp_recv_data(socket: &UdpSocket) -> Vec<Data> {
     let mut block: u16 = 1;
     let mut last_length: usize = 512;
-    let mut fullbuffer: Vec<DATA> = Vec::new();
+    let mut fullbuffer: Vec<Data> = Vec::new();
     while last_length == 512 {
 
         let mut buf: Vec<u8> = Vec::with_capacity(512);
         buf.resize(512, 0);
 
         let (amt, _) = socket.recv_from(&mut buf).unwrap();
-        let data: DATA = DATA::from_buffer(&buf);
+        let data: Data = Data::from_buffer(&buf);
 
         send_ack(&socket, block).unwrap();
 
@@ -44,13 +43,13 @@ fn tftp_recv_data(socket: &UdpSocket) -> Vec<DATA> {
     fullbuffer
 }
 
-struct RRQ {
+struct Rrq {
     opcode: u16,
     filename: String,
     mode: String,
 }
 
-impl RRQ {
+impl Rrq {
     fn to_bytes(&self) -> Vec<u8> {
         let mut buffer: Vec<u8> = Vec::new();
         buffer.append(&mut self.opcode.to_be_bytes().to_vec());
@@ -62,18 +61,28 @@ impl RRQ {
     }
 }
 
-struct DATA {
+struct Data {
     opcode: u16,
     block: u16,
     data: Vec<u8>,
 }
 
-impl DATA {
-    fn from_buffer(buffer: &Vec<u8>) -> DATA {
+impl Data {
+    fn from_buffer(buffer: &Vec<u8>) -> Data {
         let opcode = u16::from_be_bytes([buffer[0], buffer[1]]);
         let block = u16::from_be_bytes([buffer[2], buffer[3]]);
-        let data = buffer[4..].to_vec();
-        DATA {
+        let data = 
+            buffer[4..]
+            .iter()
+            .rev()
+            .filter_map(|x| {
+                if *x == 0x0 {
+                    None
+                } else {
+                    Some(*x)
+                }})
+            .collect();
+        Data {
             opcode,
             block,
             data,
@@ -81,8 +90,8 @@ impl DATA {
     }
 }
 
-fn recv_file(socket: &UdpSocket, filename: &str) -> Vec<DATA> {
-    let rrq = RRQ {
+fn recv_file(socket: &UdpSocket, filename: &str) -> Vec<Data> {
+    let rrq = Rrq {
         opcode: OPCODE::RRW as u16,
         filename: filename.to_string(),
         mode: "octet".to_string(),
@@ -97,7 +106,5 @@ fn main() {
     let buffer = recv_file(&socket, "loremipsum.txt");
     for data in buffer {
         println!("{:?}", String::from_utf8(data.data).unwrap());
-        println!("{:?}", data.block);
-        println!("{:?}", data.opcode);
     }
 }
