@@ -1,1 +1,1 @@
-ptftpd -p 6969 lo0 tftp-data/ -D 
+ptftpd -p 6969 lo tftp-data/ -D 
