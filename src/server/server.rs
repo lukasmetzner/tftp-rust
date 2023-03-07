@@ -1,27 +1,7 @@
 use std::{net::UdpSocket, fmt::Display};
 use log::{debug, error, log_enabled, info, Level};
-
-#[repr(u16)]
-enum Opcode {
-    Rrq=1,
-    Wrq=2,
-    Data=3,
-    Ack=4,
-    Error=5,
-}
-
-impl Opcode {
-    pub fn from_u16(value: u16) -> Opcode {
-        match value {
-            1 => Opcode::Rrq,
-            2 => Opcode::Wrq,
-            3 => Opcode::Data,
-            4 => Opcode::Ack,
-            5 => Opcode::Error,
-            _ => panic!("Unkown opcode!"),
-        }
-    }
-}
+use std::fs::File;
+use std::io::prelude::*;
 
 pub struct TFTPServer {
     root_dir: String,
@@ -30,17 +10,24 @@ pub struct TFTPServer {
 
 impl TFTPServer {
     fn handle_rrq(&self, buffer: &[u8; 512]) {
-        let data: Vec<u8> = 
+        // Read after opcode to end of file name; terminated by zero byte
+        let path: String = String::from_utf8(
             buffer[2..]
             .iter()
-            .filter_map(|x| {
-                if *x == 0x0 {
-                    None
-                } else {
-                    Some(*x)
-                }
-            })
-            .collect();
+            .take_while(|x| {**x != 0x0})
+            .map(|x| {*x})
+            .collect()
+        ).unwrap();
+
+        // Try reading targeted file
+        debug!("Received file path: {}", path);
+        let mut file = File::open(path).unwrap();
+        let mut file_buffer: Vec<u8> = Vec::new();
+        // TODO: Send error on not found
+        file.read_to_end(&mut file_buffer).unwrap();
+        debug!("Read {:?} bytes", file_buffer.len());
+        let parts: f32 = (file_buffer.len() as f32 / 498f32).ceil();
+        debug!("Parts: {}", parts);
     } 
 
     pub fn start_server(&self) {
@@ -49,13 +36,14 @@ impl TFTPServer {
             info!("Receiving!");
             let (amt, sock_addr) = self.socket.recv_from(&mut buffer).unwrap();
             debug!("Received {} bytes from {}", amt, sock_addr.to_string());
-            let opcode: Opcode = Opcode::from_u16(u16::from_be_bytes([buffer[0], buffer[1]]));
-            match opcode as Opcode {
-                Opcode::Rrq => self.handle_rrq(&buffer),
-                Opcode::Wrq => {debug!("Wrq")},
-                Opcode::Data => {debug!("Data")},
-                Opcode::Ack => {debug!("Ack")},
-                Opcode::Error => {debug!("Error")},
+            // Switch between 5 different opcodes stored in the first 2 bytes
+            match buffer[1] {
+                1 => self.handle_rrq(&buffer),
+                2 => {debug!("Wrq")},
+                3 => {debug!("Data")},
+                4 => {debug!("Ack")},
+                5 => {debug!("Error")},
+                _ => panic!("Unkown opcode!"),
             }
         }
     }
