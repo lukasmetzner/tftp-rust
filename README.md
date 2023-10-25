@@ -1,5 +1,7 @@
 # TFTP
 
+![Tests](https://github.com/lukasmetzner/tftp-rust/workflows/Rust/badge.svg)
+
 The goal of this project is to implement a simple server for the TFTP protocol. Different RRQ/WRQ modes won't be supported.
 
 # Protocol
