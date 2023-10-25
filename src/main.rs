@@ -60,12 +60,6 @@ impl Server {
         Ok(())
     }
 
-    //  2 bytes     string    1 byte     string   1 byte
-    //  ------------------------------------------------
-    // | Opcode |  Filename  |   0  |    Mode    |   0  |
-    //  ------------------------------------------------
-    //                  RRQ/WRQ packet
-
     fn handle_rrq(
         &self,
         init_packet: [u8; 512],
